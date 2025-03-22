@@ -53,9 +53,12 @@ def home():
 
         message_data = request.json.get("data", {})
         if message_data:
-            sender = message_data["from"]
-            message = message_data["body"]
-            save_reply_to_db(sender, message)
+            sender = message_data.get("from")
+            message = message_data.get("body")
+            from_me = message_data.get("fromMe", True)
+
+            if sender and message and not from_me:
+                save_reply_to_db(sender, message)
 
         return result
 
