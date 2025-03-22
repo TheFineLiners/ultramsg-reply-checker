@@ -1,63 +1,69 @@
 from flask import Flask, request, jsonify
 from test import Ultrawebhook
-import json
+import mysql.connector
+from datetime import datetime
 
 app = Flask(__name__)
 
-# JSON file to store the last replies
-DATA_FILE = "replies.json"
+# ✅ Database connection details (update these with your Hostinger credentials)
+DB_CONFIG = {
+    'host': 'localhost',  # usually 'localhost' or your Hostinger DB host
+    'user': 'u252854390_replies_user',
+    'password': 'whatsapp_replies@321UltraMsg',
+    'database': 'u252854390_whatsapp_reply'
+}
 
 
-# Function to load data from JSON file
-def load_data():
+# ✅ Save reply to MySQL
+def save_reply_to_db(phone, message):
     try:
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        sql = "REPLACE INTO replies (phone, message, created_at) VALUES (%s, %s, %s)"
+        values = (phone, message, datetime.now())
+        cursor.execute(sql, values)
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except mysql.connector.Error as err:
+        print(f"Database error: {err}")
 
 
-# Function to save data to JSON file
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+# ✅ Get reply from MySQL
+def get_reply_from_db(phone):
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT message FROM replies WHERE phone = %s", (phone,))
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return result['message'] if result else "No reply"
+    except mysql.connector.Error as err:
+        print(f"Database error: {err}")
+        return "Error fetching reply"
 
 
-# Webhook route to receive WhatsApp messages
+# ✅ Webhook route
 @app.route("/", methods=["POST"])
 def home():
     if request.json:
         bot = Ultrawebhook(request.json)
         result = bot.processing()
 
-        # Extract message details
         message_data = request.json.get("data", {})
         if message_data:
             sender = message_data["from"]
             message = message_data["body"]
-
-            # Save last message reply
-            saved_data = load_data()
-            saved_data[sender] = message
-            save_data(saved_data)
+            save_reply_to_db(sender, message)
 
         return result
 
 
-# ✅ New route: Check reply status
+# ✅ Check reply via GET
 @app.route("/check_reply/<phone_number>", methods=["GET"])
 def check_reply(phone_number):
-    saved_data = load_data()
-
-    # ✅ Ensure that the number matches the stored format
-    formatted_number = f"{phone_number}@c.us"
-
-    print(f"🔍 Checking for number: {formatted_number}")  # Debugging Print
-    print(f"📂 Saved Data: {saved_data}")  # Debugging Print
-
-    reply = saved_data.get(formatted_number, "No reply")
-    print(f"✅ Reply Found: {reply}")  # Debugging Print
-
+    reply = get_reply_from_db(phone_number)
     return jsonify({"reply": reply})
 
 
