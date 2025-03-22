@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # ✅ Database connection details (update these with your Hostinger credentials)
 DB_CONFIG = {
-    'host': 'localhost',  # usually 'localhost' or your Hostinger DB host
+    "host": "srv12345.hosting-server.net",  # usually 'localhost' or your Hostinger DB host
     'user': 'u252854390_replies_user',
     'password': 'whatsapp_replies@321UltraMsg',
     'database': 'u252854390_whatsapp_reply'
