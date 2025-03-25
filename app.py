@@ -17,6 +17,10 @@ DB_CONFIG = {
 # ✅ Save reply to MySQL
 def save_reply_to_db(phone, message):
     try:
+        # Ensure phone number starts with '+'
+        if not phone.startswith('+'):
+            phone = '+' + phone
+            
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         sql = "REPLACE INTO replies (phone, message, created_at) VALUES (%s, %s, %s)"
